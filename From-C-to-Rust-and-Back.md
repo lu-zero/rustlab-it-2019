@@ -90,7 +90,7 @@ Ideally you'd like to use the best of both words:
 
 - Replace a small internal component from a large C project (e.g. [librsvg](https://gitlab.gnome.org/GNOME/librsvg))
 - Share the **assembly-optimized** kernels across projects (e.g. [ring](https://github.com/briansmith/ring) or [rav1e](https://github.com/xiph/rav1e))
-- Use a rust library from your C/Go [production pipeline](https://medium.com/vimeo-engineering-blog/behind-the-scenes-of-av1-at-vimeo-a2115973314b) ([crav1e](https://github.com/lu-zero/crav1e) at [Vimeo](https://press.vimeo.com/61553-vimeo-introduces-support-for-royalty-free-video-codec-av1)
+- Use a rust library from your C/Go [production pipeline](https://medium.com/vimeo-engineering-blog/behind-the-scenes-of-av1-at-vimeo-a2115973314b) ([crav1e](https://github.com/lu-zero/crav1e) at [Vimeo](https://press.vimeo.com/61553-vimeo-introduces-support-for-royalty-free-video-codec-av1))
   - **BONUS TRACK**: Use rust to write your system __[libc](https://gitlab.redox-os.org/redox-os/relibc)__ since your [whole operating system](https://redox-os.org) is written in Rust already.
 ---
 
@@ -110,7 +110,7 @@ Ideally you'd like to use the best of both words:
 	- The default **Rust** memory representation is highly optimized.
 	- You can tell the compiler to be wasteful and have structs
 - `extern "C"` & `#[no_mangle]` for our functions
-	- **Rust** a specific [symbol mangling strategy](https://github.com/rust-lang/rfcs/pull/2603) to avoid collisions.
+	- **Rust** has a specific [symbol mangling strategy](https://github.com/rust-lang/rfcs/pull/2603) to avoid collisions.
 	- You can tell the compiler to not do that (and be [more precise](https://doc.rust-lang.org/reference/items/external-blocks.html) on what to do when the need arises).
 - Use the [std::os::raw](https://doc.rust-lang.org/std/os/raw/index.html) and [std::ffi](https://doc.rust-lang.org/std/ffi/index.html) type definitions (and the [libc crate](https://docs.rs/libc/0.2.58/libc/) when needed)
 ---
