@@ -383,4 +383,71 @@ Hello from Rust!
 ---
 # Concerns and hurdles
 ## Making a C-ABI dylib written in Rust
+- Crafting a **proper** dynamic library is non-trivial once you want to support more than 1 platform.
+	- Linux and most *BSD are nearly straightforward
+	- macOS is a little more verbose
+	- I omitted how to do with **Windows** because it won't fit the slides...
+- Omitted from the example but needed in real-life:
+  - We should provide a [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
+  - We should provide a proper header file.
 
+---
+# Tools and integrations to make our life simpler
+## Because nobody wants to call `rustc` and `cc` directly
+### Nor edit the binary sections to add the correct version information.
+#### Nor hand-craft symbol lists (`.rs` <-> `.h`)
+##### Nor hand write pkg-config `.pc` files
+
+---
+# Real-life scenarios
+
+## [librsvg](https://gitlab.gnome.org/GNOME/librsvg) - Moving code from C to Rust
+- Making `cargo` and `autootools` talk to each other somehow
+## [rav1e](https://github.com/xiph/rav1e) - Moving code from Rust to Assembly
+- Integrate [nasm](https://www.nasm.us/) in `cargo` to build **x86_64**-specific SIMD.
+## [relibc](https://gitlab.redox-os.org/redox-os/relibc) - Reimplementing the C stdlib in Rust
+- Use `Make` and `cargo` together
+## [crav1e](https://github.com/lu-zero/crav1e) - Give rav1e a C interface
+- Produce a correct dynamic library, header and pkg-config file
+
+---
+# librsvg - autotools integration
+
+- autoconf
+	- use `AC_CHECK_PROGS` to check for `cargo` (and `rustc`)
+	- Check for the correct minimum version
+- automake
+	- Keep a list of rust sources in the `Makefile.am`
+	- Bind the staticlib building to make custom targets
+		- Make sure to use the correct target path
+	- Use `cargo` `build.rs` to pass through variables set in the `Makefile.am`.
+	- Link the static libraries together and have `libtool` deal with the dynamic library problem.
+
+---
+# librsvg
+### `configure.ac`
+``` m4
+AC_CHECK_PROGS(CARGO, [cargo], [no])
+AS_IF(test x$CARGO = xno,
+    AC_MSG_ERROR([cargo is required.  Please install the Rust toolchain from https://www.rust-lang.org/])
+)
+...
+```
+### `Makefile.am`
+``` make
+$(RUST_LIB): $(RUST_SRC)
+	+cd $(top_srcdir)/rsvg_internals &&        \
+	PKG_CONFIG_ALLOW_CROSS=1                   \
+	PKG_CONFIG='$(PKG_CONFIG)'                 \
+	CARGO_TARGET_DIR=$(CARGO_TARGET_DIR)       \
+	$(CARGO) --locked build $(CARGO_VERBOSE)   \
+	$(CARGO_TARGET_ARGS) $(CARGO_RELEASE_ARGS) \
+	--features "c-library"
+```
+---
+# librsvg
+- The symbol lists are hand-crafted
+- Relies on `gtk-rs` crates to access `glib`, `cairo`, etc...
+- Uses `cargo-vendor` to provide the source snapshots including the  dependencies.
+
+---
