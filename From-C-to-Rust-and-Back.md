@@ -405,8 +405,6 @@ Hello from Rust!
 - Making `cargo` and `autootools` talk to each other somehow
 ## [rav1e](https://github.com/xiph/rav1e) - Moving code from Rust to Assembly
 - Integrate [nasm](https://www.nasm.us/) in `cargo` to build **x86_64**-specific SIMD.
-## [relibc](https://gitlab.redox-os.org/redox-os/relibc) - Reimplementing the C stdlib in Rust
-- Use `Make` and `cargo` together
 ## [crav1e](https://github.com/lu-zero/crav1e) - Give rav1e a C interface
 - Produce a correct dynamic library, header and pkg-config file
 
@@ -449,5 +447,182 @@ $(RUST_LIB): $(RUST_SRC)
 - The symbol lists are hand-crafted
 - Relies on `gtk-rs` crates to access `glib`, `cairo`, etc...
 - Uses `cargo-vendor` to provide the source snapshots including the  dependencies.
+---
+# rav1e - `build.rs`
+- Manually import the assembly symbols and use the combination of `feature="nasm"` and `target_arch = "x86_64"`.
+- Leverage nasm-rs to build the a static library with the assembly code.
+- Use `cargo:rustc-link-lib=static` to link it.
+- The decoding tests leverage `aom-rs` and `dav1d-rs` to keep everything tidy.
+---
+# rav1e
+
+``` rust
+// build.rs
+#[cfg(feature = "nasm")]
+fn build_nasm_files() {
+```
+``` rust
+let dest_path = Path::new(&out_dir).join("config.asm");
+let mut config_file = File::create(dest_path).unwrap();
+config_file.write(b"  %define private_prefix rav1e\n")?;
+```
+
+``` rust
+nasm_rs::compile_library_args(
+      "rav1easm",
+      &[
+          "src/x86/data.asm",
+```
+```
+println!("cargo:rustc-link-lib=static=rav1easm");
+rerun_dir("src/x86");
+rerun_dir("src/ext/x86");
+```
+---
+# rav1e
+``` rust
+// predict.rs
+#[cfg(all(target_arch = "x86_64", feature = "nasm"))]
+macro_rules! decl_angular_ipred_fn {
+  ($f:ident) => {
+    extern {
+      fn $f(
+        dst: *mut u8, stride: libc::ptrdiff_t,
+        topleft: *const u8,
+        width: libc::c_int, height: libc::c_int,
+        angle: libc::c_int
+      );
+    }
+  };
+}
+```
+``` rust
+#[cfg(all(target_arch = "x86_64", feature = "nasm"))]
+decl_angular_ipred_fn!(rav1e_ipred_dc_avx2);
+```
+---
+# rav1e
+- The lack of an `asmbindgen` makes hand-crafting the symbol import a must.
+  - In rav1e we automate it with some macros
+- `nasm-rs` works decently even if it is basically rav1e-maintained nowadays.
+  - Integrating it in `cc-rs` would avoid some effort duplication
+- Leveraging external crates instead of integrating directly `aom` and `dav1d` made the `build.rs` incredibly simpler.
+  - Before `cmake-rs` was used to build a custom `aom`.
+---
+
+# crav1e - `build.rs` + `Makefile`
+- `Cargo.toml`
+  - Set the library crate type to `cdylib` and `staticlib`
+- `build.rs`
+  - Use [cbindgen](https://github.com/eqrion/cbindgen/) to generate the `.h`
+  - Use [cdylib-link-lines](https://crates.io/crates/cdylib-link-lines) to link the library correctly
+- `Makefile`
+  - Produce the `.pc` file
+    - Extract the `native-static-libs`
+  - Install target
+  - c-examples (for testing)
+---
+# crav1e - `build.rs`
+``` rust
+extern crate cbindgen;
+extern crate cdylib_link_lines;
+
+fn main() {
+    let crate_dir =
+        std::env::var("CARGO_MANIFEST_DIR").unwrap();
+    let header_path: std::path::PathBuf =
+    	["include", "rav1e.h"].iter().collect();
+
+    cbindgen::generate(crate_dir)
+        .unwrap()
+        .write_to_file(header_path);
+
+    println!("cargo:rerun-if-changed=src/lib.rs");
+    println!("cargo:rerun-if-changed=cbindgen.toml");
+
+    cdylib_link_lines::metabuild();
+}
+```
+---
+# crav1e - `Makefile`
+``` Makefile
+# Getting the native-static-libs
+rav1e.pc: data/rav1e.pc.in Makefile Cargo.toml
+        sed -e "s;@prefix@;$(prefix);" \
+            -e "s;@libdir@;$(libdir);" \
+            -e "s;@incdir@;$(incdir);" \
+            -e "s;@VERSION@;$(VERSION);" \
+            -e "s;@PRIVATE_LIBS@;$$(rustc --print \
+            	native-static-libs /dev/null \
+                --crate-type staticlib 2>&1 | \
+                grep native-static-libs | \
+                cut -d ':' -f 3);" data/rav1e.pc.in > $@
+```
+---
+# crav1e - `Makefile`
+``` Makefile
+# Horrible hack for Msys
+#
+# This only works natively building on Windows
+# with a GNU toolchain Rust. Tested in MSYS2.
+ifneq ($(OS),Linux)
+ifneq ($(OS),Darwin)
+OS=$(shell uname -o)
+STATIC_NAME=rav1e.lib
+endif
+endif
+
+SO_NAME_Darwin=librav1e.dylib
+SO_NAME_MAJOR_Darwin=librav1e.$(VERSION_MAJOR).dylib
+SO_NAME_INSTALL_Darwin=librav1e.$(VERSION).dylib
+SO_NAME_Linux=librav1e.so
+SO_NAME_MAJOR_Linux=librav1e.so.$(VERSION_MAJOR)
+SO_NAME_INSTALL_Linux=librav1e.so.$(VERSION)
+SO_NAME_INSTALL_Msys=rav1e.dll
+SO_NAME_Msys=rav1e.dll
+```
+---
+# crav1e - `Makefile`
+``` Makefile
+install: target/$(build_mode)/$(STATIC_NAME) rav1e.pc include/rav1e.h target/$(build_mode)/$(SO_NAME_$(OS))
+        -mkdir -p $(INCDIR) $(LIBDIR)/pkgconfig
+        cp rav1e.pc $(LIBDIR)/pkgconfig
+        cp target/$(build_mode)/$(STATIC_NAME) $(LIBDIR)
+        cp target/$(build_mode)/$(SO_NAME_$(OS)) $(LIBDIR)/$(SO_NAME_INSTALL_$(OS))
+ifneq ($(OS),Msys)
+        ln -sf $(LIBDIR)/$(SO_NAME_INSTALL_$(OS)) $(LIBDIR)/$(SO_NAME_$(OS))
+        ln -sf $(LIBDIR)/$(SO_NAME_INSTALL_$(OS)) $(LIBDIR)/$(SO_NAME_MAJOR_$(OS))
+else
+        cp target/$(build_mode)/$(SO_NAME_$(OS)).a $(LIBDIR)/$(SO_NAME_INSTALL_$(OS)).a
+        cp target/$(build_mode)/rav1e.def $(LIBDIR)/rav1e.def
+endif
+        cp include/rav1e.h $(INCDIR)
+```
+---
+# crav1e
+- We have the build logic scattered in at least 2 places: `build.rs` and `Makefile`
+  - The OS-specific logic is scattered around multiple and it makes supporting cross compiling more **convoluted** than it should.
+
+- Most of the `build.rs` lives in **reusable** crates already
+  - `cdylib-link-line` is simple enough and lightweight.
+  - `cbindgen` adds up a lot for the build process time, calling it as executable from the `Makefile` could improve the build time while adding a preparation step for the user.
+
+
+---
+# crav1e
+- The `pkg-config`-generation can be improved.
+  - Extracting the `native-static-libs` is fairly brittle, but there is no way out of it for now.
+  - Extracting information from `Cargo.toml` in the `Makefile` requires parsing `toml` using `grep` and `sed` or adding the dependency for a json query tool.
+- The C-API bindings are quite small, yet they **need** a separate crate since the build machinery is too cumbersome to live in the main crate.
+---
+# cargo-c
+
+- A cargo applet that integrates `cbindgen`, `cdylib-link-line` and `pkg-config-gen`.
+- Builds and **installs** `.h`, `.pc` and libraries with a simple command
+- Supports **macOS**, **Linux** and **Windows** (only msys2 for now)
+- Requires **minimal** changes to the main crate to build
+
+---
+# cargo-c
 
 ---
