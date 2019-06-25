@@ -614,15 +614,79 @@ endif
   - Extracting the `native-static-libs` is fairly brittle, but there is no way out of it for now.
   - Extracting information from `Cargo.toml` in the `Makefile` requires parsing `toml` using `grep` and `sed` or adding the dependency for a json query tool.
 - The C-API bindings are quite small, yet they **need** a separate crate since the build machinery is too cumbersome to live in the main crate.
+  - Some wannabe users are confused by the two crates existence
+  - API evolution is non-atomic
 ---
 # cargo-c
 
 - A cargo applet that integrates `cbindgen`, `cdylib-link-line` and `pkg-config-gen`.
 - Builds and **installs** `.h`, `.pc` and libraries with a simple command
 - Supports **macOS**, **Linux** and **Windows** (only msys2 for now)
-- Requires **minimal** changes to the main crate to build
+- All the information required to work is provided by `Cargo.toml` (and `cbindgen.toml`)
+- Requires **minimal** changes to the main crate to build if any.
 
 ---
 # cargo-c
+## Requirements
 
+- The `crate` must have a `lib` target
+  - And the target crate **must** be the first of the workspace due a `cargo-metadata` limitation.
+- The C-API code can be guarded using `#[cfg(cargo_c)]`
+  - It **must** the first module in the library due `cbindgen` limitations.
+- Only a single library and header can be produced per crate (`cbindgen` and `cargo-c` limitation)
 ---
+
+# cargo-c use-case
+- Less invasive
+  - No complex `build.rs`
+  - No duplicated logic in multiple places
+- All the complexity is hidden
+  - All the `cdylib`-craft is embedded in `cargo-c`
+- No additional build systems and non-rust dependencies:
+  - All you need is `cargo install cargo-c`
+- The install phase is packager-friendly:
+    - The usual `destdir`, `libdir`, `includedir` overrides are easy to pass.
+---
+# Moving crav1e back into rav1e - Why
+
+- `crav1e` works and it is used already by Vimeo with not many issues
+- **But** keeping the two crates in sync when we change the API is additional work
+    - Double review
+    - Double release churn
+- The `make`-based build system works
+- **But** is not straightforward.
+  - `DESTDIR`, `LIBDIR`, etc are pseudo-standard, but not discoverable.
+  - Extracting information from `cargo` using `make` is cumbersome.
+---
+# Moving crav1e back into rav1e
+- Add a `src/capi.rs` with the C-API bindings.
+- Reference to this module as the **first** in `src/lib.rs`
+- Use `#[cfg(cargo_c)]` to conditionally build it.
+- Copy the `cbindgen.toml`
+- ...
+- That's all!
+---
+# TL;DR
+
+``` sh
+$ git clone https://github.com/xiph/rav1e
+$ cd rav1e
+$ cargo cinstall --prefix=/usr --destdir=/tmp/rav1e-out
+$ lsd --tree /tmp/rav1e-out
+rav1e-out
+└── usr
+   ├── include
+   │  └── rav1e
+   │     └── rav1e.h
+   └── lib
+      ├── librav1e.0.1.0.dylib
+      ├── librav1e.0.dylib
+      ├── librav1e.a
+      ├── librav1e.dylib
+      └── pkg-config
+         └── rav1e.pc
+```
+---
+
+# Questions?
+___
