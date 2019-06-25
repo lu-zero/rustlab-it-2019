@@ -1,3 +1,4 @@
+
 # From C to Rust and Back
 
 ## Luca Barbato
@@ -12,8 +13,8 @@
 	-  <lu_zero@videolan.org>
 	-  [@lu-zero](https://github.com/lu-zero) on GitHub
 
-- Packaging software in Gentoo let you experience about every possible pitfalls and shortcomings in languages **and** their build systems.
-- Writing complex mutimedia code is always interesting, you have some heavy constraints since you need performance **AND** keep the code robust at the same time.
+- Packaging software in Gentoo let you see most of the languages **AND**  build systems shortcomings.
+- Writing complex mutimedia code you need performance **AND** keep the code __robust__ at the same time.
 ---
 # Introduction
 - Picking a language for a project
@@ -45,7 +46,8 @@
 ## C - Pros
 
 - **C** is an established language, plenty of amazing software everybody uses is written in it.
-- It let you have **nearly** predictable performance while giving you enough levels of abstractions to express concepts in an effective way, most of the times. (And this is why most of the multimedia software is written in C)
+- It let you have **nearly** predictable performance while giving you enough levels of abstractions to express concepts in an effective way, most of the times.
+> And this is why **most** of the multimedia software is written in C.
 - It's *ABI* is simple enough that nearly every language can map to it.
 
 ---
@@ -53,21 +55,20 @@
 ## C - Cons
 
 - The language, and its compilers, have nearly nothing to prevent you to make **mistakes** that lead to memory **corruption**
-	- Even if you are careful the odds are **always** non-zero
+	> Even if you are careful the odds are **always** non-zero
 
 - You **pay** for the abstractions
 	- The boilerplate code you have to write is large
-		- *preprocessor* macros can **hide** some, and even more effectively **hide bugs** within it!
+		> *preprocessor* macros can **hide** some, and even more effectively **hide bugs** within it!
 	- The compiler usually cannot optimize away all of it.
 ---
 # From C to Rust
 ## Rust - Pros
 - **Rust** actively prevents you from make a **large** class of mistakes.
-	- You cannot have memory hazards in safe rust: the compiler will **stop you**.
+	> You cannot have memory hazards in safe rust: the compiler will **stop you**.
 - In **Rust** higher level abstractions usually can lead to better runtime execution
-	- If the compiler has **better information** on how the code should behave it could apply optimizations it cannot consider otherwise, e.g. the *autovectorizer works much better!*
+	> If the compiler has **better information** on how the code should behave it could apply optimizations it cannot consider otherwise, e.g. the *autovectorizer works much better!*
 - A growing number of high performance libraries is being produced, mainly thanks to the fact rust let you write **robust code** that is also fast to **execute**.
-
 ---
 # From C to Rust
 ## Rust - Cons
@@ -76,24 +77,15 @@
 	- You have some good software written with it, but not ALL you need
 - You **could** use it everywhere, but that does not mean you **should** rewrite everything with it.
 	- Rust does **not** save you from logic mistakes
-	- There is always a cost-opportunity tradeoff
+	> There is always a cost-opportunity tradeoff
 
 ---
 # From C to Rust
 
 Ideally you'd like to use the best of both words:
 - Use the **rust** robustness and speed to write complex code that would be otherwise **painful** to debug.
+
 - Leverage battle-tested C (or **assembly**) routines that had been already optimized and known to work correctly.
-
----
-# From C to Rust (and Back)
-## Integration options as used in the real world
-
-
-- Replace a small internal component from a large C project (e.g. [librsvg](https://gitlab.gnome.org/GNOME/librsvg))
-- Share the **assembly-optimized** kernels across projects (e.g. [ring](https://github.com/briansmith/ring) or [rav1e](https://github.com/xiph/rav1e))
-- Use a rust library from your C [production pipeline](https://medium.com/vimeo-engineering-blog/behind-the-scenes-of-av1-at-vimeo-a2115973314b) ([crav1e](https://github.com/lu-zero/crav1e) at [Vimeo](https://press.vimeo.com/61553-vimeo-introduces-support-for-royalty-free-video-codec-av1))
-  - **BONUS TRACK**: Use rust to write your system __[libc](https://gitlab.redox-os.org/redox-os/relibc)__ since your [whole operating system](https://redox-os.org) is written in Rust already.
 
 ---
 # Simple examples
@@ -114,7 +106,7 @@ Before delving in the details of actual projects let's start with simplified exa
 # Writing C-compatible code in Rust
 ## Language features
 
-- `#[repr(c)]` for our data types
+- `#[repr(C)]` for our data types
 	- The default **Rust** memory representation is highly optimized.
 	- You can tell the compiler to be wasteful and have structs
 - `extern "C"` & `#[no_mangle]` for our functions
@@ -180,7 +172,7 @@ Hello from Rust!
 
 - The actual integration looks _simple_ (sort of), but is **not**
 	- You **link** a static library as **usual**, but how to produce it?
-		- You normally do not use just `rustc` alone
+		> You normally do not use just `rustc` alone
 	- You would not like to hand-craft the exported symbols list.
 
 ---
@@ -198,7 +190,7 @@ Hello from Rust!
 - The **meson** native rust support is complete
 	- It is not crate-aware.
 	- It is dequate if you are writing something tiny and `std-only`.
-	- Help in integrating the cargo build plan system is **welcome** to overcome those limitations is probably welcome.
+	- Help in integrating the cargo build plan system to overcome those limitations is probably welcome.
 
 - Do **not** use bazel
 	- Really no.
@@ -212,9 +204,9 @@ Hello from Rust!
 
 | Pros | Cons |
 |-|-|
-| Easy to start having something working and build from there | Maintaining the project requires knowing the two different build systems. |
-| You can copy what others did for their project and be happy as they are.| The two toolchain share the **least** amount of information about one another. |
-| | Getting cross compiling requires a decent amount of skill |
+| Easy to start having something working and build from there | Maintaining the project requires knowing the **two different** build systems. |
+| You can **copy** what others did for their project and be happy as they are.| The two toolchain share the **least** amount of information about one another. |
+| | Getting cross compiling requires a **decent** amount of skill |
 
 ---
 # Concerns and hurdles
@@ -229,8 +221,8 @@ Hello from Rust!
 - We have a `lib.c` with two symbols we want to use:
 	- A pointer to a constant `NULL-terminated` array of `char`.
 	- A function, `hello_c` that calls `printf`.
-- We have a `main.rs` that refers and uses them.
-- We want to build another executable.
+- We have a `main.rs` that refers-to and uses them.
+- We want to build an executable.
 
 ---
 # Using C-compatible code in Rust
@@ -305,7 +297,7 @@ Hello from C!
 ---
 # Using a C-ABI dylib in Rust
 - Assume we have a `libhello` providing its **platform-specifically-named** library.
-	- It requires quite a bit of platform knowledge to produce a **correct** dynamic library.
+	> It requires quite a bit of platform knowledge to produce a **correct** dynamic library
 - We want to link it to our `main.rs` as before.
 
 ---
@@ -354,7 +346,7 @@ Hello from C!
 	- You need to pass `platform-specific` flags
 	- There is no `--print cdylib-link-line` to spare us some manual work.
 - The way `rustc` interact with the linker is slightly more verbose
-- This is where we can improve by leaps.
+> This is where we can improve by leaps.
 
 ---
 # Making a C-ABI dylib written in Rust
@@ -384,9 +376,9 @@ Hello from Rust!
 # Concerns and hurdles
 ## Making a C-ABI dylib written in Rust
 - Crafting a **proper** dynamic library is non-trivial once you want to support more than 1 platform.
-	- Linux and most *BSD are nearly straightforward
+	- Linux and most \*BSD are nearly straightforward
 	- macOS is a little more verbose
-	- I omitted how to do with **Windows** because it won't fit the slides...
+	- I omitted how to deal with **Windows** because it won't fit the slides...
 - Omitted from the example but needed in real-life:
   - We should provide a [pkg-config](https://www.freedesktop.org/wiki/Software/pkg-config/)
   - We should provide a proper header file.
@@ -399,7 +391,16 @@ Hello from Rust!
 ##### Nor hand write pkg-config `.pc` files
 
 ---
-# Real-life scenarios
+# From C to Rust (and Back)
+## Integration options as used in the real world
+
+- Replace a small internal component from a large C project (e.g. [librsvg](https://gitlab.gnome.org/GNOME/librsvg))
+
+- Share the **assembly-optimized** kernels across projects (e.g. [ring](https://github.com/briansmith/ring) or [rav1e](https://github.com/xiph/rav1e))
+
+- Use a rust library from your C [production pipeline](https://medium.com/vimeo-engineering-blog/behind-the-scenes-of-av1-at-vimeo-a2115973314b) ([crav1e](https://github.com/lu-zero/crav1e) at [Vimeo](https://press.vimeo.com/61553-vimeo-introduces-support-for-royalty-free-video-codec-av1))
+---
+# From C to Rust (and Back)
 
 ## [librsvg](https://gitlab.gnome.org/GNOME/librsvg) - Moving code from C to Rust
 - Making `cargo` and `autootools` talk to each other somehow
@@ -407,6 +408,9 @@ Hello from Rust!
 - Integrate [nasm](https://www.nasm.us/) in `cargo` to build **x86_64**-specific SIMD.
 ## [crav1e](https://github.com/lu-zero/crav1e) - Give rav1e a C interface
 - Produce a correct dynamic library, header and pkg-config file
+
+## [rav1e](https://github.com/xiph/rav1e) - Integrate back *crav1e* using `cargo-c`
+- Do all `crav1e` does, but in a less invasive and more straightforward way
 
 ---
 # librsvg - autotools integration
