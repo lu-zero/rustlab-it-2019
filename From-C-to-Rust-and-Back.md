@@ -18,15 +18,26 @@
 ---
 # Introduction
 - Picking a language for a project
+> Why we want to use Rust _and_ C and interoperability is **important**.
+
+
+</br>
+
+> **TL;DR**:
+> - Rust is **great**, but you won't rewrite everything overnight.
+> - **hand crafted** assembly is there to be used.
 
 ---
+
 # Picking a language for a project
 ## Rules of thumb
 
 -  How much time I'm going to spend in tasks **unrelated** to implementing features?
 -  How much code already written can I **reuse** if I use this language for the new project?
 -  How hard will be for 3rd-parties to use my projects?
+
 ---
+
 # Picking a language for a project
 ## New or mature?
 
@@ -35,6 +46,7 @@
 - One or another might provide better tools to solve your problems.
 
 ---
+
 # From C to Rust
 
 - **C** is a **mature** language with plenty of high performing and battle tested software available.
@@ -183,13 +195,13 @@ Hello from Rust!
 - Calling [cargo](https://github.com/rust-lang/cargo) from an host build system is usually the path most consolidated project take.
   - many details can be controlled by [env vars](https://doc.rust-lang.org/cargo/reference/environment-variables.html?highlight=env#environment-variables-cargo-reads).
   - [cargo metadata](https://doc.rust-lang.org/cargo/commands/cargo-metadata.html?highlight=metadata#cargo-metadata) and [cargo build --build-plan](https://doc.rust-lang.org/cargo/reference/unstable.html?highlight=build,plan#build-plan) can provide to the caller plenty of information.
-- Using cargo to build the C code is **feasible** but makes more sense when you are importing C code in a rust project.
+- Using cargo to build the C code is **feasible** but it makes more sense when you are importing C code in a rust project.
 ---
 # From C to Rust: Concerns and hurdles
 ## Build system support - one build system
 - The **meson** native rust support is complete
 	- It is not crate-aware.
-	- It is dequate if you are writing something tiny and `std-only`.
+	- It is adequate if you are writing something tiny and `std-only`.
 	- Help in integrating the cargo build plan system to overcome those limitations is probably welcome.
 
 - Do **not** use bazel
@@ -291,7 +303,7 @@ Hello from C!
 - [bindgen](https://github.com/rust-lang/rust-bindgen) can parse the **C** headers to expose the symbols to **Rust**.
 - Calling **C** functions from **Rust** is as easy as calling any other `unsafe` code.
 	- Bare pointers (`*mut ptr`, `*const ptr`) can be wrapped in normal structs and `Drop` can be implemented on them to make the memory management simple.
-- Building **foreign** code from `cargo` is simple thanks to [cc-rs](https://github.com/alexcrichton/cc-rs), [nasm-rs](https://crates.io/crates/nasm-rs) and, if the needs arise is feasible to use [cmake](https://github.com/alexcrichton/cmake-rs) or [autotools](https://github.com/lu-zero/autotools-rs) with minimal hurdle.
+- Building **foreign** code from `cargo` is simple thanks to [cc-rs](https://github.com/alexcrichton/cc-rs), [nasm-rs](https://crates.io/crates/nasm-rs) and, if the needs arise, it is feasible to use [cmake](https://github.com/alexcrichton/cmake-rs) or [autotools](https://github.com/lu-zero/autotools-rs) with minimal hurdle.
 - [metadeps](https://crates.io/crates/metadeps) and [pkg-config](https://crates.io/crates/pkg-config) make even easier link external libraries.
 
 ---
@@ -335,7 +347,7 @@ Hello from C!
 # Using a C-ABI dylib in Rust
 - The code remains the same as before.
 - Building it for this purpose is getting more complex and with many platform specific nuances.
-	- I avoided **windows** on purpose since it gets even more complex
+	> I avoided **Windows** on purpose since it gets even more complex
 
 - The **Rust** side remains unchanged.
 	- The concerns about the runtime linker search paths and ABI version are the **usual** that come with the concept itself of dynamic library.
@@ -403,7 +415,7 @@ Hello from Rust!
 # From C to Rust (and Back)
 
 ## [librsvg](https://gitlab.gnome.org/GNOME/librsvg) - Moving code from C to Rust
-- Making `cargo` and `autootools` talk to each other somehow
+- Making `cargo` and `autotools` talk to each other somehow
 ## [rav1e](https://github.com/xiph/rav1e) - Moving code from Rust to Assembly
 - Integrate [nasm](https://www.nasm.us/) in `cargo` to build **x86_64**-specific SIMD.
 ## [crav1e](https://github.com/lu-zero/crav1e) - Give rav1e a C interface
@@ -605,7 +617,7 @@ endif
 ---
 # crav1e
 - We have the build logic scattered in at least 2 places: `build.rs` and `Makefile`
-  - The OS-specific logic is scattered around multiple and it makes supporting cross compiling more **convoluted** than it should.
+  - The OS-specific logic is scattered around multiple places and it makes supporting cross compiling more **convoluted** than it should.
 
 - Most of the `build.rs` lives in **reusable** crates already
   - `cdylib-link-line` is simple enough and lightweight.
@@ -623,9 +635,9 @@ endif
 ---
 # cargo-c
 
-- A cargo applet that integrates `cbindgen`, `cdylib-link-line` and `pkg-config-gen`.
+- A cargo applet that integrates `cbindgen`, `cdylib-link-line` and `pkg-config`-generation.
 - Builds and **installs** `.h`, `.pc` and libraries with a simple command
-- Supports **macOS**, **Linux** and **Windows** (only msys2 for now)
+- Supports **macOS**, **Linux** and **Windows** (only `msys2` for now)
 - All the information required to work is provided by `Cargo.toml` (and `cbindgen.toml`)
 - Requires **minimal** changes to the main crate to build if any.
 
@@ -646,6 +658,7 @@ endif
   - No duplicated logic in multiple places
 - All the complexity is hidden
   - All the `cdylib`-craft is embedded in `cargo-c`
+  - All the `pkg-config` details are taken care of without relying on `sed`.
 - No additional build systems and non-rust dependencies:
   - All you need is `cargo install cargo-c`
 - The install phase is packager-friendly:
@@ -653,7 +666,7 @@ endif
 ---
 # Moving crav1e back into rav1e - Why
 
-- `crav1e` works and it is used already by Vimeo with not many issues
+- `crav1e` works fine and it is used already by Vimeo.
 - **But** keeping the two crates in sync when we change the API is additional work
     - Double review
     - Double release churn
@@ -669,6 +682,7 @@ endif
 - Copy the `cbindgen.toml`
 - ...
 - That's all!
+  --
 ---
 # TL;DR
 
@@ -694,3 +708,23 @@ rav1e-out
 
 # Questions?
 ___
+
+---
+# What is left to  do with cargo-c?
+- Polishing
+  - clippy lints
+  - `println!`
+- Better reporting/UI
+- More configuration knobs for the `pkg-config`-generation
+- Bug discovery and fix
+- crates.io integration?
+
+---
+## Scope creep is always lingering
+- Shall we support tests and examples?
+  - Add `ctest` ?
+  - Add `cbuild --examples`?
+  - Add a `crun`
+- Integrate in cargo?
+  - Make cargo `--prefix`, `--destdir`, aware?
+  - Improve `cargo install` by itself?
