@@ -5,12 +5,15 @@
 
 ### RustLab 2019
 
+https://github.com/lu-zero/rustlab-it-2019
+
 ---
 # Intro - Who am I?
 
 - Luca Barbato
 	-  <lu_zero@gentoo.org>
 	-  <lu_zero@videolan.org>
+	-  <luca.barbato@luminem.it>
 	-  [@lu-zero](https://github.com/lu-zero) on GitHub
 
 - Packaging software in Gentoo let you see most of the languages **AND**  build systems shortcomings.
@@ -707,6 +710,7 @@ rav1e-out
 ---
 
 # Questions?
+
 ___
 
 ---
